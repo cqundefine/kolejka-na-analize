@@ -5,6 +5,15 @@
 const FULL_NAME = /^\p{L}[\p{L}'’-]*(?: \p{L}[\p{L}'’-]*)+$/u;
 const RAW_INPUT_LIMIT = 200;
 
+function canonicalizeName(value) {
+  return value
+    .normalize('NFC')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/\b(\p{L})/gu, (match) => match.toUpperCase());
+}
+
 function normalizeName(input, { minLength, maxLength }) {
   if (typeof input !== 'string') {
     return { error: 'Podaj imię.' };
@@ -13,7 +22,7 @@ function normalizeName(input, { minLength, maxLength }) {
     return { error: 'Imię jest za długie.' };
   }
 
-  const name = input.normalize('NFC').replace(/\s+/g, ' ').trim();
+  const name = canonicalizeName(input);
   const length = [...name].length;
 
   if (length < minLength || length > maxLength) {

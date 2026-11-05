@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     ports:
       # Tylko lokalnie – publiczny dostęp przez reverse proxy (np. nginx z TLS).
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:5432:5432"
     volumes:
       - kolejka-data:/app/data
     read_only: true

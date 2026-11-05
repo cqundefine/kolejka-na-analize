@@ -1,8 +1,8 @@
 {
   "server": {
     "host": "127.0.0.1",
-    "port": 3000,
-    "trustProxy": false,
+    "port": 5432,
+    "trustProxy": true,
     "maxBodyBytes": 1024,
     "requestTimeoutMs": 10000
   },

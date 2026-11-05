@@ -22,9 +22,16 @@ function showMessage(text, isError) {
   message.className = isError ? 'error' : 'ok';
 }
 
+function formatPublicName(name) {
+  if (typeof name !== 'string') return 'nikt';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return name.trim() || 'nikt';
+  return `${parts[0]} ${parts[parts.length - 1].slice(0, 2)}`;
+}
+
 function showJoinStep(name) {
   pendingName = name;
-  who.textContent = name;
+  who.textContent = formatPublicName(name);
   nameForm.hidden = true;
   joinPanel.hidden = false;
   updateJoinButton();
@@ -54,13 +61,13 @@ function startCooldown(name, ms) {
 }
 
 function render(state) {
-  first.textContent = state.first ?? 'nikt';
+  first.textContent = formatPublicName(state.first ?? 'nikt');
 
   const items = state.queue.map((entry) => {
     const li = document.createElement('li');
     const name = document.createElement('span');
     name.className = 'name';
-    name.textContent = entry.name;
+    name.textContent = formatPublicName(entry.name);
 
     const count = document.createElement('span');
     count.className = 'count';

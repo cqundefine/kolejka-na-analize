@@ -44,6 +44,8 @@ test('walidacja wymaga imienia i nazwiska, odrzuca znaczniki i normalizuje spacj
   const b = normalizeName('ANNA KOWALSKA', LIMITS);
   assert.equal(a.name, 'Anna Kowalska');
   assert.equal(a.key, b.key);
+  assert.equal(normalizeName('  anna   kOwAlSkA ', LIMITS).name, 'Anna Kowalska');
+  assert.equal(normalizeName("JAN O'NEIL", LIMITS).name, "Jan O'Neil");
   assert.ok(!normalizeName("Jan O'Neil", LIMITS).error);
   assert.ok(!normalizeName('Anna Kowalska-Nowak', LIMITS).error);
 });

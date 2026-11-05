@@ -5,7 +5,7 @@ const { promisify } = require('node:util');
 
 const scryptAsync = promisify(crypto.scrypt);
 const SETTING_KEY = 'admin_password_hash';
-const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+const SCRYPT_OPTIONS = { N: 131072, r: 8, p: 1, maxmem: 128 * 1024 * 1024 };
 const KEY_LENGTH = 64;
 const PASSWORD_MIN = 12;
 const PASSWORD_MAX = 128;
