@@ -23,7 +23,7 @@ COPY public ./public
 RUN mkdir -p /app/data && chown node:node /app/data
 USER node
 
-EXPOSE 3000
+EXPOSE 5432
 VOLUME ["/app/data"]
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

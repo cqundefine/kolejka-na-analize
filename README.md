@@ -7,7 +7,7 @@ Prosta kolejka zapisów do zadań. Node.js (≥ 22) + SQLite (`better-sqlite3`),
 ```bash
 npm install
 npm test          # testy jednostkowe
-npm start         # serwer na 127.0.0.1:3000 (ustawienia w config.json)
+npm start         # serwer na 127.0.0.1:5432 (ustawienia w config.json)
 ```
 
 Na VPS serwer nasłuchuje tylko na `127.0.0.1` – wystaw go przez reverse proxy (np. nginx z TLS). Jeśli proxy jest przed aplikacją, ustaw `server.trustProxy: true`, żeby rate limit działał per klient, a nie per proxy.
@@ -15,7 +15,7 @@ Na VPS serwer nasłuchuje tylko na `127.0.0.1` – wystaw go przez reverse proxy
 ## Docker
 
 ```bash
-docker compose up -d --build                              # serwer na 127.0.0.1:3000
+docker compose up -d --build                              # serwer na 127.0.0.1:5432
 docker compose exec -it kolejka npm run admin:passwd      # ustawia hasło do panelu admina
 docker compose exec kolejka npm run next                  # kończy zadanie
 docker compose exec kolejka npm run reset -- --yes        # nowa kolejka (kopia w volume)
