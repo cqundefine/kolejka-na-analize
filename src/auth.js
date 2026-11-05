@@ -5,7 +5,10 @@ const { promisify } = require('node:util');
 
 const scryptAsync = promisify(crypto.scrypt);
 const SETTING_KEY = 'admin_password_hash';
-const SCRYPT_OPTIONS = { N: 131072, r: 8, p: 1, maxmem: 128 * 1024 * 1024 };
+// N=131072 + maxmem=128MiB is too close for constrained Docker containers.
+// Lower the work factor and keep a comfortable memory ceiling so the password
+// hash can be generated reliably in production containers.
+const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1, maxmem: 256 * 1024 * 1024 };
 const KEY_LENGTH = 64;
 const PASSWORD_MIN = 12;
 const PASSWORD_MAX = 128;
