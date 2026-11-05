@@ -1,0 +1,92 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+main {
+  width: 100%;
+  max-width: 32rem;
+}
+
+form .row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem;
+  font: inherit;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+#message.ok {
+  color: #1a7f37;
+}
+
+#message.error {
+  color: #cf222e;
+}
+
+.first {
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+ol li {
+  padding: 0.25rem 0;
+}
+
+.count {
+  opacity: 0.6;
+  font-size: 0.9rem;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.status {
+  opacity: 0.7;
+}
+
+#message.ok,
+#message.error {
+  font-weight: 500;
+}
+
+button.danger {
+  color: #cf222e;
+}
+
+details {
+  margin: 1.5rem 0;
+}
+
+details form {
+  margin-top: 0.5rem;
+}
+
+details label {
+  display: block;
+  margin-top: 0.5rem;
+}

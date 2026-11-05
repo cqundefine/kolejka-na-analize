@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Kolejka – panel administratora</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>Panel administratora</h1>
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <section id="login" hidden>
+      <form id="login-form" autocomplete="off">
+        <label for="password">Hasło</label>
+        <div class="row">
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+          <button type="submit">Zaloguj</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="panel" hidden>
+      <p class="status">Zajęte miejsca: <span id="taken">0</span> / <span id="capacity">0</span></p>
+
+      <form id="add-form" autocomplete="off">
+        <label for="new-name">Dodaj osobę (można dodać wielokrotnie)</label>
+        <div class="row">
+          <input id="new-name" name="name" type="text" maxlength="200" placeholder="Imię i nazwisko" required>
+          <button type="submit">Dodaj</button>
+        </div>
+      </form>
+
+      <h2>Kolejka</h2>
+      <p>
+        <button type="button" id="next">Następny (zakończ zadanie)</button>
+      </p>
+      <ol id="queue"></ol>
+      <p id="empty" hidden>Brak osób w kolejce.</p>
+
+      <h2>Historia zakończonych zadań</h2>
+      <ol id="history"></ol>
+      <p id="history-empty" hidden>Brak zakończonych zadań.</p>
+
+      <details>
+        <summary>Zmień hasło</summary>
+        <form id="password-form" autocomplete="off">
+          <label for="current-password">Obecne hasło</label>
+          <div class="row">
+            <input id="current-password" type="password" autocomplete="current-password" required>
+          </div>
+          <label for="new-password">Nowe hasło (12–128 znaków)</label>
+          <div class="row">
+            <input id="new-password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+            <button type="submit">Zmień</button>
+          </div>
+        </form>
+      </details>
+
+      <p><button type="button" id="logout">Wyloguj</button></p>
+    </section>
+  </main>
+  <script src="/admin.js"></script>
+</body>
+</html>

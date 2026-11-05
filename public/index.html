@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kolejka do zadań</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>Kolejka do zadań</h1>
+
+    <form id="join-form" autocomplete="off">
+      <label for="name">Imię i nazwisko</label>
+      <div class="row">
+        <input id="name" name="name" type="text" maxlength="200" placeholder="np. Anna Kowalska" required>
+        <button type="submit">Zapisz się</button>
+      </div>
+    </form>
+
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <section>
+      <h2>Na czele kolejki</h2>
+      <p id="first" class="first">—</p>
+    </section>
+
+    <section>
+      <h2>Kolejka</h2>
+      <ol id="queue"></ol>
+      <p id="empty" hidden>Brak osób w kolejce.</p>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

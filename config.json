@@ -1,0 +1,36 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 3000,
+    "trustProxy": false,
+    "maxBodyBytes": 1024,
+    "requestTimeoutMs": 10000
+  },
+  "database": {
+    "path": "data/kolejka.sqlite"
+  },
+  "name": {
+    "minLength": 3,
+    "maxLength": 64
+  },
+  "admin": {
+    "cookieSecure": true,
+    "sessionMinutes": 480,
+    "loginRateLimit": {
+      "windowMs": 900000,
+      "maxRequests": 5
+    }
+  },
+  "queue": {
+    "maxLength": 200
+  },
+  "rateLimit": {
+    "windowMs": 60000,
+    "maxRequests": 10
+  },
+  "reset": {
+    "backup": true,
+    "backupDir": "data/backups",
+    "clearParticipants": true
+  }
+}

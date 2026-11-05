@@ -1,0 +1,20 @@
+{
+  "name": "kolejka",
+  "version": "1.0.0",
+  "description": "Kolejka zapisów do zadań (Node.js + SQLite)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "next": "node scripts/next.js",
+    "reset": "node scripts/reset.js",
+    "admin:passwd": "node scripts/admin-passwd.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}
