@@ -10,13 +10,21 @@
   <main>
     <h1>Kolejka do zadań</h1>
 
-    <form id="join-form" autocomplete="off">
+    <form id="name-form" autocomplete="off">
       <label for="name">Imię i nazwisko</label>
       <div class="row">
         <input id="name" name="name" type="text" maxlength="200" placeholder="np. Anna Kowalska" required>
-        <button type="submit">Zapisz się</button>
+        <button type="submit">Dalej</button>
       </div>
     </form>
+
+    <section id="join-panel" hidden>
+      <p>Zapisujesz się jako: <span id="who" class="first"></span></p>
+      <div class="row">
+        <button type="button" id="join">Zapisz się</button>
+        <button type="button" id="back">Zmień imię</button>
+      </div>
+    </section>
 
     <p id="message" role="status" aria-live="polite"></p>
 

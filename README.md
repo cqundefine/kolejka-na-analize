@@ -30,6 +30,8 @@ Uwaga: za portem opublikowanym przez Dockera adres klienta to adres bramki Docke
 ## Zasady kolejki
 
 - Imię i nazwisko są wymagane: co najmniej dwa wyrazy, tylko litery, a wewnątrz wyrazu także `'`, `’` i `-`. Długość po normalizacji: 3–64 znaki.
+- Strona najpierw pyta o imię i nazwisko, potem pokazuje panel z przyciskiem „Zapisz się”.
+- Jedna osoba może zapisać się raz na `queue.joinCooldownMs` (domyślnie 60 s). Limit jest na osobę, nie na adres IP, bo za Dockerem wszyscy mają ten sam IP.
 - Osoba może zapisać się ponownie, także gdy jest już w kolejce. Każde zgłoszenie to nowy wpis z aktualną liczbą zapisów tej osoby.
 - Kolejność: najpierw liczba zapisów w chwili zgłoszenia (rosnąco), potem czas zgłoszenia. Nowa osoba z mniejszą liczbą zapisów wskakuje przed wszystkich, którzy mają ich więcej.
 - Istniejące wpisy osoby się nie przesuwają, gdy ta sama osoba zapisze się ponownie.

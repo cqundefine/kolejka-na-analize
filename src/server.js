@@ -44,6 +44,24 @@ const JOIN_STATUS = {
 function createApp({ config, queue, auth }) {
   const allowJoin = createRateLimiter(config.rateLimit);
   const handleAdmin = createAdminHandler({ config, queue, auth });
+  const cooldownMs = config.queue.joinCooldownMs;
+  const lastJoinAt = new Map();
+
+  function cooldownRemainingMs(key, now) {
+    const last = lastJoinAt.get(key);
+    if (last === undefined) return 0;
+    return Math.max(0, last + cooldownMs - now);
+  }
+
+  function startJoinCooldown(key, now) {
+    if (cooldownMs === 0) return;
+    if (lastJoinAt.size > 5000) {
+      for (const [k, at] of lastJoinAt) {
+        if (now - at >= cooldownMs) lastJoinAt.delete(k);
+      }
+    }
+    lastJoinAt.set(key, now);
+  }
 
   async function handleJoin(req, res) {
     if (!allowJoin(clientIp(req, config.server.trustProxy))) {
@@ -64,16 +82,33 @@ function createApp({ config, queue, auth }) {
       throw new HttpError(400, parsed.error);
     }
 
+    const now = Date.now();
+    const cooldownLeft = cooldownRemainingMs(parsed.key, now);
+    if (cooldownLeft > 0) {
+      const seconds = Math.ceil(cooldownLeft / 1000);
+      sendJson(
+        res,
+        429,
+        { error: `Tę osobę można zapisać ponownie za ${seconds} s.` },
+        { 'Retry-After': String(seconds) }
+      );
+      return;
+    }
+
     const result = queue.join(parsed.name, parsed.key);
     const message = JOIN_MESSAGES[result.status]?.(result);
     if (!message) {
       throw new HttpError(500, 'Wewnętrzny błąd serwera.');
+    }
+    if (result.status === 'joined') {
+      startJoinCooldown(parsed.key, now);
     }
 
     sendJson(res, JOIN_STATUS[result.status], {
       status: result.status,
       message,
       state: queue.snapshot(),
+      cooldownMs,
     });
   }
 

@@ -56,6 +56,7 @@ function loadConfig(file = DEFAULT_CONFIG_PATH) {
     name: { minLength: nameMinLength, maxLength: nameMaxLength },
     queue: {
       maxLength: readInt(queue, 'maxLength', 'queue', 1, 10000),
+      joinCooldownMs: readInt(queue, 'joinCooldownMs', 'queue', 0, 3600000),
     },
     rateLimit: {
       windowMs: readInt(rateLimit, 'windowMs', 'rateLimit', 1000, 3600000),

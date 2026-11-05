@@ -22,7 +22,8 @@
     }
   },
   "queue": {
-    "maxLength": 200
+    "maxLength": 200,
+    "joinCooldownMs": 60000
   },
   "rateLimit": {
     "windowMs": 60000,
