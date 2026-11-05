@@ -234,3 +234,27 @@ test('stara baza z kolumną priority jest przenoszona bez utraty kolejki', () =>
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('reset czyści kolejkę i historię, zachowuje ustawienia i zapisuje kopię', () => {
+  const { db, queue, join, cleanup } = setup();
+  const backupDir = tempDir();
+  try {
+    join('Anna Kowalska');
+    join('Jan Nowak');
+    queue.next();
+    db.prepare("INSERT INTO settings (key, value) VALUES ('keep', 'yes')").run();
+
+    const result = queue.reset({ backup: true, backupDir, clearParticipants: false });
+
+    assert.equal(result.removed, 1);
+    assert.ok(result.backupFile && fs.existsSync(result.backupFile));
+    assert.deepEqual(queue.entries(), []);
+    assert.deepEqual(queue.history(), []);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM participants WHERE signups > 0').get().n, 0);
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM participants').get().n, 2);
+    assert.equal(db.prepare("SELECT value FROM settings WHERE key = 'keep'").get().value, 'yes');
+  } finally {
+    cleanup();
+    fs.rmSync(backupDir, { recursive: true, force: true });
+  }
+});

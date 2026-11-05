@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
+
 /**
  * Logika kolejki.
  *
@@ -92,6 +95,26 @@ function createQueue(db, { maxLength }) {
     return head.display_name;
   });
 
+  const clearAll = db.transaction((clearParticipants) => {
+    const { changes } = db.prepare('DELETE FROM queue').run();
+    db.prepare('DELETE FROM history').run();
+    if (clearParticipants) {
+      db.prepare('DELETE FROM participants').run();
+    } else {
+      db.prepare('UPDATE participants SET signups = 0').run();
+    }
+    db.prepare("DELETE FROM sqlite_sequence WHERE name IN ('queue', 'history')").run();
+    return changes;
+  });
+
+  // Ustawienia z sekcji "reset" w config.json. Kopia (VACUUM INTO) idzie przed transakcją.
+  function reset({ backup, backupDir, clearParticipants }) {
+    const backupFile = backup ? backupDatabase(db, backupDir) : null;
+    const removed = clearAll(clearParticipants);
+    db.pragma('wal_checkpoint(TRUNCATE)');
+    return { removed, backupFile, clearParticipants };
+  }
+
   return {
     join: (name, key) => join(name, key),
     addEntry: (name, key) => addEntry(name, key),
@@ -100,7 +123,16 @@ function createQueue(db, { maxLength }) {
     snapshot,
     next,
     history: historyEntries,
+    reset,
   };
+}
+
+function backupDatabase(db, backupDir) {
+  fs.mkdirSync(backupDir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const file = path.join(backupDir, `kolejka-${stamp}.sqlite`);
+  db.prepare('VACUUM INTO ?').run(file);
+  return file;
 }
 
 module.exports = { createQueue };

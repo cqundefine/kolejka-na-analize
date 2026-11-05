@@ -153,6 +153,22 @@ function createAdminHandler({ config, queue, auth }) {
     );
   }
 
+  async function resetAll(req, res) {
+    requireSession(req);
+    const body = await readBody(req);
+    if (body.confirm !== 'RESET') {
+      throw new HttpError(400, 'Potwierdź reset wpisując RESET.');
+    }
+
+    const { removed, backupFile, clearParticipants } = queue.reset(config.reset);
+    const parts = [
+      `Zresetowano kolejkę (usunięto wpisów: ${removed}).`,
+      clearParticipants ? 'Lista osób wyczyszczona.' : 'Liczniki zapisów wyzerowane.',
+      backupFile ? `Kopia: ${backupFile}` : null,
+    ];
+    sendJson(res, 200, queuePayload(parts.filter(Boolean).join(' ')));
+  }
+
   const routes = [
     ['POST', /^\/api\/admin\/login$/, login],
     ['POST', /^\/api\/admin\/logout$/, logout],
@@ -160,6 +176,7 @@ function createAdminHandler({ config, queue, auth }) {
     ['POST', /^\/api\/admin\/queue$/, addToQueue],
     ['DELETE', /^\/api\/admin\/queue\/(\d{1,12})$/, removeFromQueue],
     ['POST', /^\/api\/admin\/next$/, popNext],
+    ['POST', /^\/api\/admin\/reset$/, resetAll],
     ['POST', /^\/api\/admin\/password$/, changePassword],
   ];
 

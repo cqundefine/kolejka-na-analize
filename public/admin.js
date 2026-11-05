@@ -14,6 +14,7 @@ const capacity = document.getElementById('capacity');
 const addForm = document.getElementById('add-form');
 const newNameInput = document.getElementById('new-name');
 const nextButton = document.getElementById('next');
+const resetButton = document.getElementById('reset');
 const logoutButton = document.getElementById('logout');
 const passwordForm = document.getElementById('password-form');
 
@@ -179,6 +180,12 @@ addForm.addEventListener('submit', async (event) => {
 
 nextButton.addEventListener('click', async () => {
   const result = await request('POST', '/api/admin/next');
+  handle(result, (data) => showMessage(data.message, false));
+});
+
+resetButton.addEventListener('click', async () => {
+  if (!confirm('Na pewno zresetować wszystko? Kolejka i historia zostaną usunięte.')) return;
+  const result = await request('POST', '/api/admin/reset', { confirm: 'RESET' });
   handle(result, (data) => showMessage(data.message, false));
 });
 

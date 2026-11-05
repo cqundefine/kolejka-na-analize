@@ -48,6 +48,8 @@ Panel pozwala dodać osobę (także ponownie tę samą – admin może dopisać 
 
 „Następny” usuwa pierwszą osobę z kolejki i zapisuje ją w historii (imię i liczba zapisów z chwili dołączenia). Historia jest widoczna pod kolejką w panelu (ostatnie 200 wpisów). Reset kolejki czyści też historię.
 
+Przycisk „Resetuj wszystko” (czerwony) robi to samo co `npm run reset -- --yes`: zapisuje kopię zapasową i czyści kolejkę, historię oraz listę osób (zgodnie z `reset.clearParticipants`). Hasło administratora zostaje.
+
 - Sesja to ciasteczko `HttpOnly`, `SameSite=Strict`, ważne `admin.sessionMinutes` (domyślnie 8 h). Sesje są w pamięci, więc restart serwera wylogowuje admina.
 - `admin.cookieSecure: true` (domyślnie) wymaga HTTPS. Na lokalnym HTTP ustaw `false`, inaczej przeglądarka nie zapisze ciasteczka.
 - Logowanie i zmiana hasła mają rate limit (`admin.loginRateLimit`, domyślnie 5 prób na 15 min na IP). Próby wspólnie wyczerpują ten sam limit.
@@ -76,4 +78,4 @@ Reset można uruchomić przy działającym serwerze. Reset nie rusza hasła admi
 - Nagłówki: CSP, `X-Frame-Options: DENY`, `nosniff`, `no-store`.
 - Frontend renderuje dane przez `textContent`.
 - Panel admina: sesja w ciasteczku, rate limit logowania, ochrona przed CSRF przez `SameSite=Strict` i JSON-only API. Wszystkie dane z API są wstawiane przez `textContent`.
-- `next` i `reset` działają tylko z konsoli na serwerze.
+- Reset z panelu wymaga sesji admina i potwierdzenia (`confirm: "RESET"` w API oraz okno `confirm()` w przeglądarce).
