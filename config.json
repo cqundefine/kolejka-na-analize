@@ -10,8 +10,10 @@
     "path": "data/kolejka.sqlite"
   },
   "name": {
-    "minLength": 3,
     "maxLength": 64
+  },
+  "whitelist": {
+    "file": "whitelist.yaml"
   },
   "admin": {
     "cookieSecure": true,

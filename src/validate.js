@@ -1,9 +1,9 @@
 'use strict';
 
-// Co najmniej dwa wyrazy (imię i nazwisko), każdy zaczyna się literą;
-// w wyrazach dozwolone są litery, apostrof i myślnik (np. „Anna Kowalska-Nowak”, „Jan O'Neil”).
-const FULL_NAME = /^\p{L}[\p{L}'’-]*(?: \p{L}[\p{L}'’-]*)+$/u;
+// Imion nie walidujemy wzorcem – o dopuszczeniu decyduje whitelista (src/whitelist.js).
+// Tutaj tylko czyścimy wejście: typ, długość i znaki sterujące.
 const RAW_INPUT_LIMIT = 200;
+const CONTROL_CHARS = /[\p{Cc}<>]/u;
 
 function canonicalizeName(value) {
   return value
@@ -11,10 +11,10 @@ function canonicalizeName(value) {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()
-    .replace(/\b(\p{L})/gu, (match) => match.toUpperCase());
+    .replace(/(?<![\p{L}\p{N}])(\p{L})/gu, (match) => match.toUpperCase());
 }
 
-function normalizeName(input, { minLength, maxLength }) {
+function normalizeName(input, { maxLength }) {
   if (typeof input !== 'string') {
     return { error: 'Podaj imię.' };
   }
@@ -23,15 +23,14 @@ function normalizeName(input, { minLength, maxLength }) {
   }
 
   const name = canonicalizeName(input);
-  const length = [...name].length;
-
-  if (length < minLength || length > maxLength) {
-    return { error: `Imię musi mieć od ${minLength} do ${maxLength} znaków.` };
+  if (name.length === 0) {
+    return { error: 'Podaj imię.' };
   }
-  if (!FULL_NAME.test(name)) {
-    return {
-      error: 'Podaj imię i nazwisko (np. Anna Kowalska). Dozwolone są litery, apostrof i myślnik.',
-    };
+  if (CONTROL_CHARS.test(name)) {
+    return { error: 'Imię zawiera niedozwolone znaki.' };
+  }
+  if ([...name].length > maxLength) {
+    return { error: `Imię może mieć najwyżej ${maxLength} znaków.` };
   }
 
   return { name, key: name.toLowerCase() };

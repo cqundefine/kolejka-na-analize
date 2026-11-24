@@ -8,21 +8,33 @@ const path = require('node:path');
 const Database = require('better-sqlite3');
 const { openDatabase } = require('../src/db');
 const { createQueue } = require('../src/queue');
+const { createWhitelist } = require('../src/whitelist');
 const { createAdminAuth, validatePassword } = require('../src/auth');
 const { normalizeName } = require('../src/validate');
+const { createSettings, JOIN_COOLDOWN_MAX_MS } = require('../src/settings');
 
-const LIMITS = { minLength: 3, maxLength: 64 };
+const LIMITS = { maxLength: 64 };
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'kolejka-test-'));
 }
 
-function setup() {
+const WHITELIST_NAMES = ['Ola Nowak', 'Piotr Zieliński', 'Anna Kowalska', 'Bartek Lis', 'Celina Sosnowska', 'Jan Nowak'];
+
+function writeWhitelist(file, names) {
+  const body = names.map((name) => `- ${JSON.stringify(name)}\n`).join('');
+  fs.writeFileSync(file, body || '[]\n');
+}
+
+function setup(names = WHITELIST_NAMES) {
   const dir = tempDir();
   const db = openDatabase(path.join(dir, 'test.sqlite'));
   const queue = createQueue(db, { maxLength: 50 });
+  const file = path.join(dir, 'whitelist.yaml');
+  writeWhitelist(file, names);
+  const whitelist = createWhitelist({ file, maxLength: LIMITS.maxLength });
   const join = (name) => {
-    const parsed = normalizeName(name, LIMITS);
+    const parsed = whitelist.resolve(name);
     assert.ok(!parsed.error, parsed.error);
     return queue.join(parsed.name, parsed.key);
   };
@@ -30,24 +42,100 @@ function setup() {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
   };
-  return { db, queue, join, cleanup };
+  return { db, dir, file, queue, whitelist, join, cleanup };
 }
 
-test('walidacja wymaga imienia i nazwiska, odrzuca znaczniki i normalizuje spacje', () => {
-  assert.ok(normalizeName('Anna', LIMITS).error);
+test('normalizacja czyści wejście: typ, długość, znaki sterujące i znaczniki, bez wymogu nazwiska', () => {
+  assert.equal(normalizeName('Anna', LIMITS).name, 'Anna');
+  assert.ok(normalizeName('', LIMITS).error);
+  assert.ok(normalizeName('   ', LIMITS).error);
   assert.ok(normalizeName('<script>alert(1)</script>', LIMITS).error);
   assert.ok(normalizeName('Anna Kowalska\u0000', LIMITS).error);
-  assert.ok(normalizeName('Anna Kowalska; DROP', LIMITS).error);
+  assert.ok(normalizeName('x'.repeat(65), LIMITS).error);
+  assert.ok(normalizeName('x'.repeat(201), LIMITS).error);
   assert.ok(normalizeName(42, LIMITS).error);
 
   const a = normalizeName('  Anna   Kowalska ', LIMITS);
   const b = normalizeName('ANNA KOWALSKA', LIMITS);
   assert.equal(a.name, 'Anna Kowalska');
   assert.equal(a.key, b.key);
-  assert.equal(normalizeName('  anna   kOwAlSkA ', LIMITS).name, 'Anna Kowalska');
   assert.equal(normalizeName("JAN O'NEIL", LIMITS).name, "Jan O'Neil");
-  assert.ok(!normalizeName("Jan O'Neil", LIMITS).error);
-  assert.ok(!normalizeName('Anna Kowalska-Nowak', LIMITS).error);
+});
+
+test('whitelista dopasowuje osobę bez względu na wielkość liter i spacje, zwraca imię z listy', () => {
+  const { whitelist, cleanup } = setup();
+  try {
+    const found = whitelist.resolve('  anna   KOWALSKA ');
+    assert.equal(found.name, 'Anna Kowalska');
+    assert.equal(found.key, 'anna kowalska');
+  } finally {
+    cleanup();
+  }
+});
+
+test('whitelista odrzuca osoby spoza listy (403) i błędny format (400)', () => {
+  const { whitelist, cleanup } = setup(['Jan Nowak']);
+  try {
+    assert.equal(whitelist.resolve('Anna Kowalska').status, 403);
+    assert.equal(whitelist.resolve('<b>Jan Nowak</b>').status, 400);
+  } finally {
+    cleanup();
+  }
+});
+
+test('pusta whitelista zwraca osobny komunikat, żeby admin wiedział, co dodać', () => {
+  const { whitelist, cleanup } = setup([]);
+  try {
+    const result = whitelist.resolve('Anna Kowalska');
+    assert.equal(result.status, 403);
+    assert.match(result.error, /pusta/);
+  } finally {
+    cleanup();
+  }
+});
+
+test('plik whitelisty przy starcie musi istnieć i być poprawną listą', () => {
+  const dir = tempDir();
+  try {
+    const file = path.join(dir, 'whitelist.yaml');
+    assert.throws(() => createWhitelist({ file, maxLength: 64 }), /whitelist/);
+
+    fs.writeFileSync(file, 'klucz: wartość\n');
+    assert.throws(() => createWhitelist({ file, maxLength: 64 }), /listę imion/);
+
+    fs.writeFileSync(file, '- "<script>"\n');
+    assert.throws(() => createWhitelist({ file, maxLength: 64 }), /błędne wpisy/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('zmiana pliku jest wczytywana bez restartu; usunięta osoba nie może się zapisać, ale zostaje w kolejce', () => {
+  const { file, queue, whitelist, join, cleanup } = setup();
+  try {
+    join('Anna Kowalska');
+    writeWhitelist(file, ['Jan Nowak']);
+    const later = new Date(Date.now() + 5000);
+    fs.utimesSync(file, later, later);
+
+    assert.equal(whitelist.resolve('Anna Kowalska').status, 403);
+    assert.equal(whitelist.resolve('Jan Nowak').name, 'Jan Nowak');
+    assert.deepEqual(queue.snapshot().queue.map((e) => e.name), ['Anna Kowalska']);
+  } finally {
+    cleanup();
+  }
+});
+
+test('błędna zmiana pliku zostawia ostatnią poprawną listę', () => {
+  const { file, whitelist, cleanup } = setup(['Jan Nowak']);
+  try {
+    fs.writeFileSync(file, '- "<b>"\n');
+    const later = new Date(Date.now() + 5000);
+    fs.utimesSync(file, later, later);
+    assert.equal(whitelist.resolve('Jan Nowak').name, 'Jan Nowak');
+  } finally {
+    cleanup();
+  }
 });
 
 test('nowa osoba z mniejszą liczbą zapisów wbija się przed osobę z większą', () => {
@@ -232,6 +320,48 @@ test('stara baza z kolumną priority jest przenoszona bez utraty kolejki', () =>
       .map((row) => row.display_name);
     assert.deepEqual(names, ['Ola Nowak', 'Piotr Zielinski']);
     db.close();
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('usunięcie wszystkich zapisów osoby czyści jej wpisy i licznik, reszta kolejki zostaje', () => {
+  const { db, queue, join, cleanup } = setup();
+  try {
+    join('Ola Nowak');
+    join('Piotr Zieliński');
+    join('Ola Nowak');
+    queue.next();
+    const olaEntry = queue.entries().find((e) => e.name === 'Ola Nowak');
+
+    const result = queue.removePerson(olaEntry.id);
+    assert.deepEqual(result, { name: 'Ola Nowak', removed: 1 });
+    assert.deepEqual(queue.snapshot().queue.map((e) => e.name), ['Piotr Zieliński']);
+    assert.equal(db.prepare("SELECT signups FROM participants WHERE name_key = 'ola nowak'").get().signups, 0);
+    assert.deepEqual(queue.history(), [{ name: 'Ola Nowak', signups: 1 }]);
+    assert.equal(queue.removePerson(999999), null);
+
+    const again = join('Ola Nowak');
+    assert.equal(again.yourSignups, 1);
+  } finally {
+    cleanup();
+  }
+});
+
+test('ustawienie cooldownu z panelu ma pierwszeństwo nad config.json i przetrwa ponowne otwarcie bazy', () => {
+  const { db, dir } = setup();
+  try {
+    const settings = createSettings(db, { joinCooldownMs: 60000 });
+    assert.equal(settings.joinCooldownMs(), 60000);
+
+    settings.setJoinCooldownMs(0);
+    assert.equal(settings.joinCooldownMs(), 0);
+    settings.setJoinCooldownMs(JOIN_COOLDOWN_MAX_MS);
+
+    db.close();
+    const reopened = openDatabase(path.join(dir, 'test.sqlite'));
+    assert.equal(createSettings(reopened, { joinCooldownMs: 60000 }).joinCooldownMs(), JOIN_COOLDOWN_MAX_MS);
+    reopened.close();
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

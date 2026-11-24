@@ -3,7 +3,6 @@
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
-const { normalizeName } = require('./validate');
 const {
   HttpError,
   sendJson,
@@ -41,19 +40,18 @@ const JOIN_STATUS = {
   full: 503,
 };
 
-function createApp({ config, queue, auth }) {
+function createApp({ config, queue, whitelist, auth, settings }) {
   const allowJoin = createRateLimiter(config.rateLimit);
-  const handleAdmin = createAdminHandler({ config, queue, auth });
-  const cooldownMs = config.queue.joinCooldownMs;
+  const handleAdmin = createAdminHandler({ config, queue, whitelist, auth, settings });
   const lastJoinAt = new Map();
 
-  function cooldownRemainingMs(key, now) {
+  function cooldownRemainingMs(key, now, cooldownMs) {
     const last = lastJoinAt.get(key);
     if (last === undefined) return 0;
     return Math.max(0, last + cooldownMs - now);
   }
 
-  function startJoinCooldown(key, now) {
+  function startJoinCooldown(key, now, cooldownMs) {
     if (cooldownMs === 0) return;
     if (lastJoinAt.size > 5000) {
       for (const [k, at] of lastJoinAt) {
@@ -74,16 +72,14 @@ function createApp({ config, queue, auth }) {
       throw new HttpError(400, 'Niepoprawne żądanie.');
     }
 
-    const parsed = normalizeName(
-      Object.hasOwn(body, 'name') ? body.name : undefined,
-      config.name
-    );
+    const parsed = whitelist.resolve(Object.hasOwn(body, 'name') ? body.name : undefined);
     if (parsed.error) {
-      throw new HttpError(400, parsed.error);
+      throw new HttpError(parsed.status, parsed.error);
     }
 
     const now = Date.now();
-    const cooldownLeft = cooldownRemainingMs(parsed.key, now);
+    const cooldownMs = settings.joinCooldownMs();
+    const cooldownLeft = cooldownRemainingMs(parsed.key, now, cooldownMs);
     if (cooldownLeft > 0) {
       const seconds = Math.ceil(cooldownLeft / 1000);
       sendJson(
@@ -101,7 +97,7 @@ function createApp({ config, queue, auth }) {
       throw new HttpError(500, 'Wewnętrzny błąd serwera.');
     }
     if (result.status === 'joined') {
-      startJoinCooldown(parsed.key, now);
+      startJoinCooldown(parsed.key, now, cooldownMs);
     }
 
     sendJson(res, JOIN_STATUS[result.status], {
@@ -145,8 +141,8 @@ function createApp({ config, queue, auth }) {
   };
 }
 
-function createServer({ config, queue, auth }) {
-  const handle = createApp({ config, queue, auth });
+function createServer({ config, queue, whitelist, auth, settings }) {
+  const handle = createApp({ config, queue, whitelist, auth, settings });
 
   const server = http.createServer(async (req, res) => {
     try {

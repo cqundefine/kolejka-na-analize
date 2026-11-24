@@ -1,0 +1,4 @@
+# Skopiuj ten plik do whitelist.yaml i wpisz osoby, które mogą się zapisać.
+# Jedna osoba w wierszu, zaczynając od "- ". Dopasowanie nie zależy od wielkości liter.
+- Anna Kowalska
+- Jan Nowak

@@ -8,6 +8,8 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - kolejka-data:/app/data
+      # Lista uprawnionych osób – edytujesz ją na hoście, zmiany wczytują się same.
+      - ./whitelist.yaml:/app/whitelist.yaml:ro
     read_only: true
     tmpfs:
       - /tmp

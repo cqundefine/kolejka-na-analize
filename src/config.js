@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { JOIN_COOLDOWN_MAX_MS } = require('./settings');
 
 const ROOT = path.resolve(__dirname, '..');
 const DEFAULT_CONFIG_PATH = path.join(ROOT, 'config.json');
@@ -31,10 +32,9 @@ function readString(obj, key, section, maxLength = 255) {
 
 function loadConfig(file = DEFAULT_CONFIG_PATH) {
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-  const { server, database, name, queue, rateLimit, reset, admin } = raw;
+  const { server, database, name, whitelist, queue, rateLimit, reset, admin } = raw;
 
-  const nameMinLength = readInt(name, 'minLength', 'name', 1, 100);
-  const nameMaxLength = readInt(name, 'maxLength', 'name', nameMinLength, 100);
+  const nameMaxLength = readInt(name, 'maxLength', 'name', 1, 100);
 
   return {
     server: {
@@ -53,10 +53,13 @@ function loadConfig(file = DEFAULT_CONFIG_PATH) {
     database: {
       path: path.resolve(ROOT, readString(database, 'path', 'database')),
     },
-    name: { minLength: nameMinLength, maxLength: nameMaxLength },
+    name: { maxLength: nameMaxLength },
+    whitelist: {
+      file: path.resolve(ROOT, readString(whitelist, 'file', 'whitelist')),
+    },
     queue: {
       maxLength: readInt(queue, 'maxLength', 'queue', 1, 10000),
-      joinCooldownMs: readInt(queue, 'joinCooldownMs', 'queue', 0, 3600000),
+      joinCooldownMs: readInt(queue, 'joinCooldownMs', 'queue', 0, JOIN_COOLDOWN_MAX_MS),
     },
     rateLimit: {
       windowMs: readInt(rateLimit, 'windowMs', 'rateLimit', 1000, 3600000),

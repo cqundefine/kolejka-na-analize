@@ -33,6 +33,14 @@
         </div>
       </form>
 
+      <form id="settings-form" autocomplete="off">
+        <label for="cooldown-seconds">Co ile sekund można się ponownie zapisać (0 = bez limitu, max 3600)</label>
+        <div class="row">
+          <input id="cooldown-seconds" type="number" min="0" max="3600" step="1" required>
+          <button type="submit">Zapisz</button>
+        </div>
+      </form>
+
       <h2>Kolejka</h2>
       <p>
         <button type="button" id="next">Następny (zakończ zadanie)</button>

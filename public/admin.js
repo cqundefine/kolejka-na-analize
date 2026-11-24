@@ -13,6 +13,8 @@ const taken = document.getElementById('taken');
 const capacity = document.getElementById('capacity');
 const addForm = document.getElementById('add-form');
 const newNameInput = document.getElementById('new-name');
+const settingsForm = document.getElementById('settings-form');
+const cooldownInput = document.getElementById('cooldown-seconds');
 const nextButton = document.getElementById('next');
 const resetButton = document.getElementById('reset');
 const logoutButton = document.getElementById('logout');
@@ -76,7 +78,13 @@ function render(data) {
     remove.textContent = 'Usuń';
     remove.addEventListener('click', () => removeEntry(entry.id, entry.name));
 
-    li.append(name, ' ', count, ' ', remove);
+    const removePersonButton = document.createElement('button');
+    removePersonButton.type = 'button';
+    removePersonButton.className = 'danger';
+    removePersonButton.textContent = 'Usuń wszystkie zapisy';
+    removePersonButton.addEventListener('click', () => removePerson(entry.id, entry.name));
+
+    li.append(name, ' ', count, ' ', remove, ' ', removePersonButton);
     return li;
   });
 
@@ -144,16 +152,26 @@ async function loadQueue() {
       return;
     }
     showPanel();
-    handle(result);
+    handle(result, (data) => setCooldownInput(data.settings.joinCooldownMs));
     startAutoRefresh();
   } catch {
     showMessage('Brak połączenia z serwerem.', true);
   }
 }
 
+function setCooldownInput(ms) {
+  cooldownInput.value = String(Math.round(ms / 1000));
+}
+
 async function removeEntry(id, name) {
   if (!window.confirm(`Usunąć z kolejki: ${name}?`)) return;
   const result = await request('DELETE', `/api/admin/queue/${id}`);
+  handle(result, (data) => showMessage(data.message, false));
+}
+
+async function removePerson(id, name) {
+  if (!window.confirm(`Usunąć WSZYSTKIE zapisy osoby: ${name}? Licznik zapisów zostanie wyzerowany.`)) return;
+  const result = await request('DELETE', `/api/admin/queue/${id}/person`);
   handle(result, (data) => showMessage(data.message, false));
 }
 
@@ -175,6 +193,18 @@ addForm.addEventListener('submit', async (event) => {
   handle(result, (data) => {
     showMessage(data.message, false);
     newNameInput.value = '';
+  });
+});
+
+settingsForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const seconds = Number(cooldownInput.value);
+  const result = await request('POST', '/api/admin/settings', {
+    joinCooldownMs: Math.round(seconds * 1000),
+  });
+  handle(result, (data) => {
+    showMessage(data.message, false);
+    setCooldownInput(data.settings.joinCooldownMs);
   });
 });
 

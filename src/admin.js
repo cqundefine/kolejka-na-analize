@@ -8,13 +8,13 @@ const {
   clientIp,
   readCookie,
 } = require('./http');
-const { normalizeName } = require('./validate');
 const { validatePassword } = require('./auth');
+const { JOIN_COOLDOWN_MAX_MS } = require('./settings');
 
 const COOKIE_NAME = 'kolejka_admin';
 const PASSWORD_INPUT_LIMIT = 1024;
 
-function createAdminHandler({ config, queue, auth }) {
+function createAdminHandler({ config, queue, whitelist, auth, settings }) {
   const allowSecretCheck = createRateLimiter(config.admin.loginRateLimit);
   const cookieFlags = config.admin.cookieSecure
     ? 'Path=/; HttpOnly; SameSite=Strict; Secure'
@@ -55,6 +55,7 @@ function createAdminHandler({ config, queue, auth }) {
       entries: queue.entries(),
       history: queue.history(),
       maxLength: config.queue.maxLength,
+      settings: { joinCooldownMs: settings.joinCooldownMs() },
     };
   }
 
@@ -95,9 +96,9 @@ function createAdminHandler({ config, queue, auth }) {
   async function addToQueue(req, res) {
     requireSession(req);
     const body = await readBody(req);
-    const parsed = normalizeName(Object.hasOwn(body, 'name') ? body.name : undefined, config.name);
+    const parsed = whitelist.resolve(Object.hasOwn(body, 'name') ? body.name : undefined);
     if (parsed.error) {
-      throw new HttpError(400, parsed.error);
+      throw new HttpError(parsed.status, parsed.error);
     }
 
     const result = queue.addEntry(parsed.name, parsed.key);
@@ -117,6 +118,40 @@ function createAdminHandler({ config, queue, auth }) {
       throw new HttpError(404, 'Nie ma takiej pozycji w kolejce.');
     }
     sendJson(res, 200, queuePayload('Usunięto z kolejki.'));
+  }
+
+  function removePerson(req, res, match) {
+    requireSession(req);
+    const result = queue.removePerson(Number(match[1]));
+    if (!result) {
+      throw new HttpError(404, 'Nie ma takiej pozycji w kolejce.');
+    }
+    sendJson(
+      res,
+      200,
+      queuePayload(
+        `Usunięto wszystkie zapisy: ${result.name} (wpisów w kolejce: ${result.removed}). Licznik zapisów wyzerowany.`
+      )
+    );
+  }
+
+  async function saveSettings(req, res) {
+    requireSession(req);
+    const body = await readBody(req);
+    const ms = body.joinCooldownMs;
+    if (!Number.isInteger(ms) || ms < 0 || ms > JOIN_COOLDOWN_MAX_MS) {
+      throw new HttpError(400, `Czas między zapisami musi być liczbą od 0 do ${JOIN_COOLDOWN_MAX_MS / 1000} s.`);
+    }
+    settings.setJoinCooldownMs(ms);
+    sendJson(
+      res,
+      200,
+      queuePayload(
+        ms === 0
+          ? 'Zapisano: bez limitu czasu między zapisami.'
+          : `Zapisano: osobę można zapisać ponownie po ${ms / 1000} s.`
+      )
+    );
   }
 
   function popNext(req, res) {
@@ -175,6 +210,8 @@ function createAdminHandler({ config, queue, auth }) {
     ['GET', /^\/api\/admin\/queue$/, listQueue],
     ['POST', /^\/api\/admin\/queue$/, addToQueue],
     ['DELETE', /^\/api\/admin\/queue\/(\d{1,12})$/, removeFromQueue],
+    ['DELETE', /^\/api\/admin\/queue\/(\d{1,12})\/person$/, removePerson],
+    ['POST', /^\/api\/admin\/settings$/, saveSettings],
     ['POST', /^\/api\/admin\/next$/, popNext],
     ['POST', /^\/api\/admin\/reset$/, resetAll],
     ['POST', /^\/api\/admin\/password$/, changePassword],

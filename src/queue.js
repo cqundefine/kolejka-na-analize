@@ -35,6 +35,9 @@ function createQueue(db, { maxLength }) {
       ORDER BY ${ORDER_BY}
     `),
     dequeueById: db.prepare('DELETE FROM queue WHERE id = ?'),
+    entryKey: db.prepare('SELECT name_key FROM queue WHERE id = ?'),
+    dequeueByKey: db.prepare('DELETE FROM queue WHERE name_key = ?'),
+    resetSignups: db.prepare('UPDATE participants SET signups = 0 WHERE name_key = ?'),
     addHistory: db.prepare('INSERT INTO history (name, signups) VALUES (?, ?)'),
     history: db.prepare('SELECT name, signups FROM history ORDER BY id DESC LIMIT ?'),
   };
@@ -95,6 +98,16 @@ function createQueue(db, { maxLength }) {
     return head.display_name;
   });
 
+  // Usuwa wszystkie wpisy osoby z pozycji `id` i zeruje jej licznik zapisów. Historia zostaje.
+  const removePerson = db.transaction((id) => {
+    const entry = stmt.entryKey.get(id);
+    if (!entry) return null;
+    const { display_name: name } = stmt.participant.get(entry.name_key);
+    const { changes } = stmt.dequeueByKey.run(entry.name_key);
+    stmt.resetSignups.run(entry.name_key);
+    return { name, removed: changes };
+  });
+
   const clearAll = db.transaction((clearParticipants) => {
     const { changes } = db.prepare('DELETE FROM queue').run();
     db.prepare('DELETE FROM history').run();
@@ -119,6 +132,7 @@ function createQueue(db, { maxLength }) {
     join: (name, key) => join(name, key),
     addEntry: (name, key) => addEntry(name, key),
     removeEntry: (id) => stmt.dequeueById.run(id).changes > 0,
+    removePerson: (id) => removePerson(id),
     entries,
     snapshot,
     next,
